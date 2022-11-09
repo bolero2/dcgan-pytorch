@@ -37,19 +37,22 @@ if __name__ == "__main__":
     print(g_model)
 
     datapath = config['DATASET']['path']
-    imgfiles = glob(os.path.join(datapath, "*.png"))
+    imgfiles = glob(os.path.join(datapath, f"*.{config['DATASET']['ext']}"), recursive=True)
 
     dataset = CustomDataset(datapack=imgfiles, img_size=config['DATASET']['img_size'])
     dataloader = DataLoader(dataset=dataset, batch_size=config['TRAIN']['batch_size'], drop_last=True)
 
     criterion = nn.BCELoss()    # Binary Cross Entropy Loss (h(x), y)
 
-    d_optimizer = torch.optim.Adam(d_model.parameters(), lr=float(config['TRAIN']['lr']))
+    d_optimizer = torch.optim.Adam(d_model.parameters(), lr=float(config['TRAIN']['lr']) * 0.01)
     g_optimizer = torch.optim.Adam(g_model.parameters(), lr=float(config['TRAIN']['lr']))
 
     total_train_iter = len(dataloader)
+    
+    epochs = config['TRAIN']['epochs']
+    batch_size = config['TRAIN']['batch_size']
 
-    for epoch in range(config['TRAIN']['epochs']):
+    for epoch in range(epochs):
         epoch_start = time.time()
         train_d_loss, train_g_loss = [], []
 
@@ -58,26 +61,25 @@ if __name__ == "__main__":
 
         for step, data in enumerate(dataloader):
             iter_start = time.time()
-            data = data.reshape([config['TRAIN']['batch_size'], -1])
             data = data.to(_device)
 
-            rand_data = np.random.normal(size=(config['TRAIN']['batch_size'], 100))
+            rand_data = np.random.normal(size=(batch_size, 100, 1, 1))
             rand_data = torch.from_numpy(rand_data).to(_device)
             rand_data = rand_data.type(torch.float32)
 
             d_output = d_model(data)
             g_output = g_model(rand_data)
 
-            true_target = torch.ones(config['TRAIN']['batch_size'], 1).to(_device)      # True  = 1
-            fake_target = torch.zeros(config['TRAIN']['batch_size'], 1).to(_device)     # False = 0
+            true_target = torch.ones(batch_size, 1).to(_device)      # True  = 1
+            fake_target = torch.zeros(batch_size, 1).to(_device)     # False = 0
 
-            d_loss = criterion(d_output, true_target) + criterion(d_model(g_output), fake_target)
+            d_loss = criterion(d_output.reshape(batch_size, -1), true_target) + criterion(d_model(g_output).reshape(batch_size, -1), fake_target)
             # d_loss = criterion(log(d_output), true_target) + criterion(log(1 - d_model(g_output)), fake_target)
             d_optimizer.zero_grad()
             d_loss.backward()
             d_optimizer.step()
 
-            g_loss = criterion(d_model(g_model(rand_data)), true_target)
+            g_loss = criterion(d_model(g_model(rand_data)).reshape(batch_size, -1), true_target)
             g_optimizer.zero_grad()
             g_loss.backward()
             g_optimizer.step()
@@ -100,10 +102,11 @@ if __name__ == "__main__":
         
         g_model = g_model.eval()
         with torch.no_grad():
-            rand_data = np.random.normal(size=(1, 100))
+            rand_data = np.random.normal(size=(1, 100, 1, 1))
             rand_data = torch.from_numpy(rand_data).to(_device)
             rand_data = rand_data.type(torch.float32)
 
             output = g_model(rand_data)
-            output = output.reshape(-1, 28, 28)
+            output = output.reshape(-1, config['DATASET']['img_size'][0], config['DATASET']['img_size'][1])
+            # print(output.shape)
             save_image(output, "saved.jpg")

@@ -14,7 +14,7 @@ def tensor_transform(tensor, img_size, mean, std):
     )
 
     # tensor = _transforms(tensor)
-    tensor = tensor.reshape([-1, img_size[0] * img_size[1]])
+    tensor = tensor.reshape([-1, img_size[0], img_size[1]])
     return tensor
 
 
@@ -34,7 +34,7 @@ class CustomDataset(Dataset):
         self.index = index
         imgpath = self.datapack[index]
 
-        img = Image.open(imgpath).convert('L')
+        img = Image.open(imgpath).convert('RGB')
         img = img.resize(self.img_size)
         img = np.array(img)
         img = img / 255.0
