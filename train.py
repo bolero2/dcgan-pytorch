@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     criterion = nn.BCELoss()    # Binary Cross Entropy Loss (h(x), y)
 
-    d_optimizer = torch.optim.Adam(d_model.parameters(), lr=float(config['TRAIN']['lr']) * 0.01)
+    d_optimizer = torch.optim.Adam(d_model.parameters(), lr=float(config['TRAIN']['lr']) * 0.1)
     g_optimizer = torch.optim.Adam(g_model.parameters(), lr=float(config['TRAIN']['lr']))
 
     total_train_iter = len(dataloader)
